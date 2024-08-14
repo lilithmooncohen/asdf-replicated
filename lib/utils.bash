@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for replicated.
 GH_REPO="https://github.com/replicatedhq/replicated"
 TOOL_NAME="replicated"
 TOOL_TEST="replicated version"
@@ -31,8 +30,6 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if replicated has other means of determining installable versions.
 	list_github_tags
 }
 
@@ -41,8 +38,19 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for replicated
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	ostype="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+	if [ "$ostype" = "darwin" ]; then
+		arch=all
+	else
+		if expr "$(uname -m)" : '.*64$' &>/dev/null; then
+			arch=amd64
+		else
+			arch=386
+		fi
+	fi
+
+	url="$GH_REPO/releases/download/v${version}/replicated_${version}_${ostype}_${arch}.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -59,9 +67,8 @@ install_version() {
 
 	(
 		mkdir -p "$install_path"
-		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
+		cp -r "$ASDF_DOWNLOAD_PATH"/replicated "$install_path"
 
-		# TODO: Assert replicated executable exists.
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
